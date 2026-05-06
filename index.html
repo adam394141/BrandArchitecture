@@ -190,7 +190,7 @@ textarea{resize:vertical;min-height:82px;}
     q8a:'5qC55pOa5LiK6L+w5L2g55qE5Zue562U77yM5oiR5Zac5q2h44CM',q8b:'44CN6YCZ5YCL5ZOB54mM5ZCN56ix77yM6KuL5oKo5bmr5oiR5pKw5a+r5LiA5Lu95bGs5pa844CM',
     q8c:'44CN55qE6aGY5pmv6IGy5piO44CC6YCZ5Lu96IGy5piO5oeJ5YyF5ZCr5YWs5Y+455qE44CM5Li76KaB55uu5qiZ44CN44CB44CM5qC45b+D5YO55YC86KeA44CN5ZKM44CM5pyq5L6G55m85bGV5pa55ZCR44CN44CC'
   };
-  window.PT = function(i, v) {
+  const _basePT = function(i, v) {
     const g = v||{};
     const p  = g.products     || '（產品或服務）';
     const tg = g.targetGroup  || '（從第三步選一個客群）';
@@ -234,15 +234,33 @@ textarea{resize:vertical;min-height:82px;}
       default: return '';
     }
   };
+  function _tn(t){
+    switch(t){
+      case 'ChatGPT':return '\n\n※ 請以條列式呈現重點，不需開場白或總結，直接進入核心內容。';
+      case 'Gemini':return '\n\n※ 請嚴格依照指定格式回覆，勿自行延伸。若資訊不確定請標註「待確認」，僅根據提供的資料作答。';
+      case 'Grok':return '\n\n※ 請直接切入重點，精簡扼要，不需開場白或免責聲明。';
+      case 'Claude':return '\n\n※ 請依照指定結構逐項回覆，如有不同觀點或風險請一併列出。';
+      default:return '';
+    }
+  }
+  window.PT = function(i,v){
+    var p = _basePT(i,v);
+    if(i !== 1 && v && v.mainTool) p += _tn(v.mainTool);
+    return p;
+  };
 })();
 </script>
 
 <script>
 const STEPS_CONFIG = [
-  { id:'role', label:'角色定位', title:'角色定位', desc:'自訂 AI 的顧問角色與協助範疇，讓提示詞更貼合你的需求',
+  { id:'role', label:'角色定位', title:'角色定位', desc:'選擇你的 AI 工具並自訂顧問角色，全程提示詞將自動針對該工具最佳化',
     type:'form', promptIdx:0,
-    infoMsg:'填完後複製下方提示詞，貼到 ChatGPT 或 Claude，等它回覆 <strong>【OK】</strong> 後再進行下一步。',
+    infoMsg:'① 先選擇你主要使用的 AI 工具，後續全部 12 步的提示詞都會自動針對該工具微調格式與用語。<br>② 填完後複製下方提示詞，貼到你選的 AI 工具，等它回覆 <strong>【OK】</strong> 後再進行下一步。',
     sections:[
+      { title:'選擇 AI 工具', fields:[
+        { id:'mainTool', label:'你主要使用的 AI 對話工具', hint:'全程 12 步提示詞皆會自動針對此工具微調',
+          type:'chips', chips:['ChatGPT','Gemini','Grok','Claude'] }
+      ]},
       { title:'自訂角色設定', fields:[
         { id:'roleType', label:'專業領域', hint:'填入後自動帶入提示詞',
           type:'text', ph:'例：食品、科技、服飾、電商…（留空則為「品牌顧問」）' },
@@ -342,6 +360,7 @@ const STEPS_CONFIG = [
 
 let cur = 0;
 let D = {
+  mainTool:'',
   roleType:'', taskList:'',
   profession:'', expertise:'', products:'',
   gender:'男女皆有', ageMin:'', ageMax:'',
@@ -391,6 +410,12 @@ function renderField(f) {
         <div class="chips-divider">或自訂描述</div>
         <label class="sub-label">${f.customLabel}</label>
         <input type="text" id="${f.customId}" value="${custom}" placeholder="${f.customPh||''}">
+      </div>`;
+    }
+    case 'chips': {
+      const cv = D[f.id]||'';
+      return `<div class="fg">${lbl}
+        <div class="cg">${f.chips.map(c=>`<label class="ci${cv===c?' ck':''}" onclick="setChip('${f.id}','${c}',this,'')">${c}</label>`).join('')}</div>
       </div>`;
     }
     default: return '';
